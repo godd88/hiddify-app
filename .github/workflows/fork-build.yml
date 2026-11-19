@@ -150,7 +150,12 @@ jobs:
               collect Hiddify-Linux-x64.AppImage dist/*/*.AppImage
               ;;
             macos)
-              lipo -verify_arch arm64 x86_64 build/macos/Build/Products/Release/Hiddify.app/Contents/MacOS/Hiddify
+              executable=build/macos/Build/Products/Release/Hiddify.app/Contents/MacOS/Hiddify
+              if ! lipo "$executable" -verify_arch arm64 x86_64; then
+                echo "::error::Expected a universal macOS executable at $executable"
+                lipo -info "$executable"
+                exit 1
+              fi
               collect Hiddify-macOS-universal.dmg dist/*/*.dmg
               ;;
           esac
