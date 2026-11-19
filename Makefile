@@ -64,10 +64,16 @@ endif
 BUILD_ARGS=--dart-define sentry_dsn=$(SENTRY_DSN)
 DISTRIBUTOR_ARGS=--skip-clean --build-target $(TARGET) --build-dart-define sentry_dsn=$(SENTRY_DSN)
 
+# The fork workflow pins each release archive before extraction.
+ifneq ($(CORE_SHA256),)
+download-core = bash .github/scripts/extract_verified_core.sh "$(CORE_URL)/$(CORE_NAME)-$(1).tar.gz" "$(CORE_SHA256)" "$(2)"
+else
+download-core = curl -L "$(CORE_URL)/$(CORE_NAME)-$(1).tar.gz" | tar xz -C "$(2)"
+endif
 
 
 get:	
-	flutter pub get
+	flutter pub get $(PUB_GET_ARGS)
 
 gen:
 	dart run build_runner build --delete-conflicting-outputs
@@ -479,8 +485,9 @@ linux-docker-release:
 
 	@$(GREEN)Successful. Output is in 'dist_docker' folder.$(DONE)
 
+MACOS_TARGETS ?= dmg,pkg
 macos-release:
-	fastforge package --platform macos --targets dmg,pkg $(DISTRIBUTOR_ARGS)
+	fastforge package --platform macos --targets $(MACOS_TARGETS) $(DISTRIBUTOR_ARGS)
 
 ios-release: #not tested
 	fastforge package --platform ios --targets ipa --build-export-options-plist  ios/exportOptions.plist $(DISTRIBUTOR_ARGS)
@@ -493,20 +500,20 @@ ios-simulator-validate:
 
 android-libs:
 	$(MKDIR) $(ANDROID_OUT) || echo Folder already exists. Skipping...
-	curl -L $(CORE_URL)/$(CORE_NAME)-android.tar.gz | tar xz -C $(ANDROID_OUT)/
+	$(call download-core,android,$(ANDROID_OUT))
 
 android-apk-libs: android-libs
 android-aab-libs: android-libs
 
 windows-libs:
 	$(MKDIR) $(DESKTOP_OUT) || echo Folder already exists. Skipping...
-	curl -L $(CORE_URL)/$(CORE_NAME)-windows-amd64.tar.gz | tar xz -C $(DESKTOP_OUT)/
+	$(call download-core,windows-amd64,$(DESKTOP_OUT))
 	ls $(DESKTOP_OUT) || dir $(DESKTOP_OUT)/
 	
 
 linux-amd64-libs:
 	mkdir -p $(DESKTOP_OUT)
-	curl -L $(CORE_URL)/$(CORE_NAME)-linux-amd64.tar.gz | tar xz -C $(DESKTOP_OUT)/
+	$(call download-core,linux-amd64,$(DESKTOP_OUT))
 
 linux-arm64-libs:
 	mkdir -p $(DESKTOP_OUT)
@@ -523,7 +530,7 @@ linux-arm64-musl-libs:
 
 macos-libs:
 	mkdir -p $(DESKTOP_OUT) macos/Frameworks
-	curl -L $(CORE_URL)/$(CORE_NAME)-macos.tar.gz | tar xz -C $(DESKTOP_OUT)
+	$(call download-core,macos,$(DESKTOP_OUT))
 	# Tunnel bind ships in the same tarball (built by hiddify-core `make macos`).
 	test -d $(DESKTOP_OUT)/HiddifyTunnelCore.xcframework
 	rm -rf macos/Frameworks/HiddifyTunnelCore.xcframework

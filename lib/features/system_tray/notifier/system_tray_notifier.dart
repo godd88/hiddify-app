@@ -228,7 +228,6 @@ class SystemTrayNotifier extends _$SystemTrayNotifier with TrayListener, AppLogg
 //     //   (t.proxies.pageTitle, const ProfilesOverviewRoute().location),
 //     //   (t.logs.title, const LogsOverviewRoute().location),
 //     //   // (t.settings.pageTitle, const SettingsRoute().location),
-//     //   (t.about.pageTitle, const AboutRoute().location),
 //     // ];
 
 //     // loggy.debug('updating system tray');

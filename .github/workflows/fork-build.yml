@@ -1,0 +1,146 @@
+name: Fork build
+
+on:
+  push:
+    branches:
+      - feat/5.5.5-slim
+
+permissions:
+  contents: read
+
+env:
+  IS_GITHUB_ACTIONS: '1'
+  CHANNEL: prod
+  FLUTTER_VERSION: '3.38.5'
+  PUB_GET_ARGS: --enforce-lockfile
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: ${{ matrix.platform }} (${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # https://github.com/hiddify/hiddify-core/releases/expanded_assets/v5.5.5
+        include:
+          - platform: android-apk
+            os: ubuntu-latest
+            arch: universal
+            target: android-apk-release
+            sha256: d428adaf1ebe94046cdf3e32354f5ef84f9c3019432205ccf2a84f10a5a03dd0
+          - platform: windows
+            os: windows-latest
+            arch: x64
+            target: windows-zip-release
+            sha256: aa816f8eb3b33f32cb34a7fbc557e28ac888846e0de4ee6c11e19b27c9ce3051
+          - platform: linux
+            os: ubuntu-22.04
+            arch: x64
+            target: linux-release
+            sha256: 9b522cb1b5e076d2fb41b595c5e10a10c46eb0adc2796cea81f40fa9f757e2a9
+          - platform: macos
+            os: macos-26
+            arch: universal
+            target: macos-release
+            sha256: 806409f1dc93a0292a3699fda9813215049b8496863ba4539cb4602d5850647b
+    env:
+      PLATFORM: ${{ matrix.platform }}
+      BUILD_TARGET: ${{ matrix.target }}
+      CORE_SHA256: ${{ matrix.sha256 }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          submodules: false
+
+      - name: Free disk space for Android
+        if: matrix.platform == 'android-apk'
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
+
+      - uses: subosito/flutter-action@v2.21.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - uses: actions/setup-java@v5
+        if: matrix.platform == 'android-apk'
+        with:
+          distribution: zulu
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+        if: matrix.platform == 'android-apk'
+        with:
+          packages: platform-tools
+
+      - name: Install build dependencies
+        run: |
+          make "$PLATFORM-install-deps"
+          pub_cache_bin="${PUB_CACHE:-$HOME/.pub-cache}/bin"
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            pub_cache_bin="$(cygpath -w "${PUB_CACHE:-$LOCALAPPDATA/Pub/Cache}/bin")"
+          fi
+          echo "$pub_cache_bin" >> "$GITHUB_PATH"
+
+      - name: Configure macOS ad hoc signing
+        if: matrix.platform == 'macos'
+        run: |
+          echo "XCODE_XCCONFIG_FILE=$GITHUB_WORKSPACE/macos/Runner/Configs/Unsigned.xcconfig" >> "$GITHUB_ENV"
+
+      - name: Prepare dependencies and verify core archive
+        run: make "$PLATFORM-prepare"
+
+      - name: Analyze and test Flutter sources
+        if: matrix.platform == 'linux'
+        run: |
+          flutter analyze --no-pub --no-fatal-infos --no-fatal-warnings
+          flutter test --no-pub
+
+      - name: Build platform package
+        run: make "$BUILD_TARGET" MACOS_TARGETS=dmg
+
+      - name: Verify the Flutter dependency lockfile
+        run: git diff --exit-code -- pubspec.lock
+
+      - name: Collect platform artifacts
+        id: artifacts
+        run: |
+          mkdir out
+          shopt -s nullglob
+          collect() {
+            local output="$1"
+            shift
+            if [[ $# -ne 1 || ! -s "$1" ]]; then
+              echo "::error::Expected one nonempty file for $output, found $# matches"
+              return 1
+            fi
+            cp "$1" "out/$output"
+          }
+          case "$PLATFORM" in
+            android-apk)
+              collect Hiddify-Android-universal.apk build/app/outputs/flutter-apk/app-release.apk
+              ;;
+            windows)
+              collect Hiddify-Windows-Portable-x64.zip dist/*/*.zip
+              ;;
+            linux)
+              collect Hiddify-Linux-x64.deb dist/*/*.deb
+              collect Hiddify-Linux-x64.AppImage dist/*/*.AppImage
+              ;;
+            macos)
+              lipo -verify_arch arm64 x86_64 build/macos/Build/Products/Release/Hiddify.app/Contents/MacOS/Hiddify
+              collect Hiddify-macOS-universal.dmg dist/*/*.dmg
+              ;;
+          esac
+          echo "short_sha=${GITHUB_SHA:0:8}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: Hiddify-${{ matrix.platform }}-${{ matrix.arch }}-${{ steps.artifacts.outputs.short_sha }}
+          path: out/
+          if-no-files-found: error

@@ -8,7 +8,6 @@ import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/active_breakpoint_notifier.dart';
 import 'package:hiddify/core/router/go_router/helper/custom_transition.dart';
 import 'package:hiddify/core/router/go_router/refresh_listenable.dart';
-import 'package:hiddify/features/about/widget/about_page.dart';
 import 'package:hiddify/features/app_based_routing/overview/app_list_page.dart';
 import 'package:hiddify/features/home/widget/home_page.dart';
 import 'package:hiddify/features/intro/widget/intro_page.dart';
@@ -39,7 +38,6 @@ final branchesScope = <String, FocusScopeNode>{
   'profiles': FocusScopeNode(),
   'settings': FocusScopeNode(),
   'logs': FocusScopeNode(),
-  'about': FocusScopeNode(),
 };
 
 // when the routing config is not yet initialized, this config is used
@@ -49,11 +47,11 @@ final loadingConfig = RoutingConfig(
 
 String getNameOfBranch(bool isMobileBreakpoint, bool showProfilesAction, int index) => isMobileBreakpoint
     ? ['home', 'settings'][index]
-    : ['home', if (showProfilesAction) 'profiles', 'settings', 'logs', 'about'][index];
+    : ['home', if (showProfilesAction) 'profiles', 'settings', 'logs'][index];
 
 int getIndexOfBranch(bool isMobileBreakpoint, bool showProfilesAction, String name) => isMobileBreakpoint
     ? ['home', 'settings'].indexOf(name)
-    : ['home', if (showProfilesAction) 'profiles', 'settings', 'logs', 'about'].indexOf(name);
+    : ['home', if (showProfilesAction) 'profiles', 'settings', 'logs'].indexOf(name);
 
 @Riverpod(keepAlive: true)
 class RoutingConfigNotifier extends _$RoutingConfigNotifier {
@@ -278,12 +276,6 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
                         pageBuilder: (_, state) =>
                             customTransition(TransitionType.slide, state.pageKey, const LogsPage()),
                       ),
-                      GoRoute(
-                        name: 'about',
-                        path: 'about',
-                        pageBuilder: (_, state) =>
-                            customTransition(TransitionType.slide, state.pageKey, const AboutPage()),
-                      ),
                     ],
                   ],
                 ),
@@ -296,15 +288,6 @@ class RoutingConfigNotifier extends _$RoutingConfigNotifier {
                     name: 'logs',
                     path: '/logs',
                     builder: (_, _) => FocusScope(node: branchesScope['logs'], child: const LogsPage()),
-                  ),
-                ],
-              ),
-              StatefulShellBranch(
-                routes: <GoRoute>[
-                  GoRoute(
-                    name: 'about',
-                    path: '/about',
-                    builder: (_, _) => FocusScope(node: branchesScope['about'], child: const AboutPage()),
                   ),
                 ],
               ),
