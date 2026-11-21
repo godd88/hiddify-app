@@ -62,8 +62,9 @@ class ConnectionButton extends HookConsumerWidget {
     // What a tap does follows the core alone, and the core can be stopped whatever it is doing: a
     // tunnel that is up, a start in progress, and a hot reload all turn off at once, and the core
     // cancels what it was busy with.
+    final canConnect = ref.watch(activeProfileProvider.select((profile) => profile is AsyncData && !profile.isLoading));
     final onTap = switch (status) {
-      AsyncData(value: Disconnected()) || AsyncError() => () => _connect(ref),
+      AsyncData(value: Disconnected()) || AsyncError() when canConnect => () => _connect(ref),
       AsyncData(value: Connected() || Waiting() || NoAvailableProxies() || Connecting() || HotReloading()) =>
         () => ref.read(connectionNotifierProvider.notifier).toggleConnection(),
       _ => null,
@@ -188,13 +189,13 @@ class ConnectionButton extends HookConsumerWidget {
 
   /// Connects, or sends the user to add a profile when there is none.
   Future<void> _connect(WidgetRef ref) async {
-    final dialogs = ref.read(dialogNotifierProvider.notifier);
-    if (ref.read(activeProfileProvider).valueOrNull == null) {
-      await dialogs.showNoActiveProfile();
-      ref.read(bottomSheetsNotifierProvider.notifier).showAddProfile();
+    final profile = ref.read(activeProfileProvider);
+    if (profile is! AsyncData || profile.isLoading) return;
+    if (profile.value == null) {
+      await ref.read(bottomSheetsNotifierProvider.notifier).showAddProfile();
       return;
     }
-    if (await dialogs.showExperimentalFeatureNotice()) {
+    if (await ref.read(dialogNotifierProvider.notifier).showExperimentalFeatureNotice()) {
       await ref.read(connectionNotifierProvider.notifier).toggleConnection();
     }
   }

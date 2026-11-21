@@ -8,7 +8,6 @@ import 'package:hiddify/core/model/constants.dart';
 import 'package:hiddify/features/profile/add/phone_import/phone_import_notifier.dart';
 import 'package:hiddify/features/profile/add/phone_import/phone_import_panel.dart';
 import 'package:hiddify/features/profile/add/phone_import/phone_import_server.dart';
-import 'package:hiddify/features/profile/add/widgets/free_btns.dart';
 import 'package:hiddify/features/profile/add/widgets/widgets.dart';
 import 'package:hiddify/features/profile/model/profile_entity.dart';
 import 'package:hiddify/features/profile/notifier/profile_notifier.dart';
@@ -24,7 +23,6 @@ class AddProfileModal extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isLoading = ref.watch(addProfileNotifierProvider).isLoading;
     final currentWidget = ref.watch(addProfilePageNotifierProvider);
-    ref.listen(freeSwitchNotifierProvider, (_, _) {});
     // On Android TV the sheet serves the page a phone sends a link to, while it is open; each
     // link waits for the user to import it here.
     if (ref.watch(isAndroidTvProvider).valueOrNull ?? false) {
@@ -75,12 +73,9 @@ class AddProfileOptions extends HookConsumerWidget {
   const AddProfileOptions({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // final isLoadingProfile = ref.watch(addProfileNotifierProvider).isLoading;
-    final freeSwitch = ref.watch(freeSwitchNotifierProvider);
     final isTv = ref.watch(isAndroidTvProvider).valueOrNull ?? false;
-    // a TV has no camera to scan with, so it has the desktop's three buttons
+    // A TV has no camera to scan with, so it has the desktop's three buttons.
     final threeButtons = PlatformUtils.isDesktop || isTv;
-    final isDesktop = PlatformUtils.isDesktop;
     final gapCount = threeButtons ? AddProfileModalConst.fixBtnsGapCountDesktop : AddProfileModalConst.fixBtnsGapCount;
     final itemCount = threeButtons
         ? AddProfileModalConst.fixBtnsItemCountDesktop
@@ -88,27 +83,13 @@ class AddProfileOptions extends HookConsumerWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final fixBtnsHeight = (constraints.maxWidth - AddProfileModalConst.fixBtnsGap * gapCount) / itemCount;
-        final phoneHeight = isTv ? PhoneImportPanel.heightOf(context) + AddProfileModalConst.fixBtnsGap : 0;
-        final fullHeight = fixBtnsHeight + phoneHeight + AddProfileModalConst.navBarHeight + 32;
-        final initial = !freeSwitch ? fullHeight : fullHeight + 180;
-        var min = !freeSwitch ? fullHeight : fullHeight + 100;
-        var max = !freeSwitch ? fullHeight / constraints.maxHeight : 0.85;
-        if (isDesktop) {
-          min = initial;
-          max = initial / constraints.maxHeight;
-        }
-        return DraggableScrollableSheet(
-          initialChildSize: initial / constraints.maxHeight,
-          minChildSize: min / constraints.maxHeight,
-          maxChildSize: max,
-          expand: false,
-          builder: (context, scrollController) => Column(
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: AddProfileModalConst.fixBtnsGap),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const Gap(AddProfileModalConst.fixBtnsGap),
               FixBtns(height: fixBtnsHeight, canScan: !isTv),
               if (isTv) ...[const Gap(AddProfileModalConst.fixBtnsGap), const PhoneImportPanel()],
-              if (freeSwitch) Expanded(child: FreeBtns(scrollController: scrollController)) else const Spacer(),
-              const NavBar(),
             ],
           ),
         );

@@ -7,7 +7,6 @@ import 'package:hiddify/core/router/dialog/widgets/confirmation_dialog.dart';
 import 'package:hiddify/core/router/dialog/widgets/custom_alert_dialog.dart';
 import 'package:hiddify/core/router/dialog/widgets/experimental_feature_notice.dart';
 import 'package:hiddify/core/router/dialog/widgets/free_profile_consent_dialog.dart';
-import 'package:hiddify/core/router/dialog/widgets/no_active_profile_dialog.dart';
 import 'package:hiddify/core/router/dialog/widgets/ok_dialog.dart';
 import 'package:hiddify/core/router/dialog/widgets/proxy_info_dialog.dart';
 import 'package:hiddify/core/router/dialog/widgets/save_dialog.dart';
@@ -146,10 +145,6 @@ class DialogNotifier extends _$DialogNotifier {
       return await _show<bool?>(const ExperimentalFeatureNoticeDialog()) ?? false;
     }
     return true;
-  }
-
-  Future<void> showNoActiveProfile() async {
-    return await _show<void>(const NoActiveProfileDialog());
   }
 
   Future<bool> showFreeProfileConsent({required String title, required String consent}) async {
