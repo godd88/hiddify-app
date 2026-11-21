@@ -1,7 +1,5 @@
-import 'package:dartx/dartx.dart';
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:hiddify/core/app_info/app_info_provider.dart';
 import 'package:hiddify/core/localization/translations.dart';
 import 'package:hiddify/core/router/bottom_sheets/bottom_sheets_notifier.dart';
 import 'package:hiddify/features/home/widget/connection_button.dart';
@@ -37,13 +35,15 @@ class HomePage extends HookConsumerWidget {
           children: [
             Assets.images.logo.svg(height: 24),
             const Gap(8),
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(text: t.common.appTitle),
-                  const TextSpan(text: " "),
-                  const WidgetSpan(child: AppVersionLabel(), alignment: PlaceholderAlignment.middle),
-                ],
+            Flexible(
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(text: t.common.appTitle),
+                    const TextSpan(text: " "),
+                    const WidgetSpan(child: _WebsiteLabel(), alignment: PlaceholderAlignment.middle),
+                  ],
+                ),
               ),
             ),
           ],
@@ -220,28 +220,20 @@ class HomePage extends HookConsumerWidget {
   }
 }
 
-class AppVersionLabel extends HookConsumerWidget {
-  const AppVersionLabel({super.key});
+class _WebsiteLabel extends StatelessWidget {
+  const _WebsiteLabel();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final t = ref.watch(translationsProvider).requireValue;
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final version = ref.watch(appInfoProvider).requireValue.presentVersion;
-    if (version.isBlank) return const SizedBox();
-
-    return Semantics(
-      label: t.common.version,
-      button: false,
-      child: Container(
-        decoration: BoxDecoration(color: theme.colorScheme.secondaryContainer, borderRadius: BorderRadius.circular(4)),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-        child: Text(
-          version,
-          textDirection: TextDirection.ltr,
-          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSecondaryContainer),
-        ),
+    return Container(
+      decoration: BoxDecoration(color: theme.colorScheme.secondaryContainer, borderRadius: BorderRadius.circular(4)),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+      child: Text(
+        'www.we2say.com',
+        textDirection: TextDirection.ltr,
+        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSecondaryContainer),
       ),
     );
   }
